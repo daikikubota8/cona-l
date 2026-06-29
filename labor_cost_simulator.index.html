@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人件費シミュレーター</title>
+<style>
+:root {
+  --bg:#f0f2f7;--white:#ffffff;--text:#1a1e2e;--sub:#5a6080;--muted:#9499b8;--border:#dde1f0;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-mid:#dbeafe;
+  --ok:#1d4ed8;--ok-bg:#eff6ff;--ok-mid:#bfdbfe;
+  --caut:#d97706;--caut-bg:#fef3c7;--caut-mid:#fde68a;
+  --warn:#dc2626;--warn-bg:#fee2e2;--warn-mid:#fecaca;
+  --fri:#7c3aed;--fri-bg:#f5f3ff;--fri-mid:#ddd6fe;
+  --sat:#0369a1;--sat-bg:#f0f9ff;--sat-mid:#bae6fd;
+  --sun:#b91c1c;--sun-bg:#fff1f2;--sun-mid:#fecdd3;
+  --hol:#059669;--hol-bg:#ecfdf5;--hol-mid:#a7f3d0;
+  --eve:#d97706;--eve-bg:#fffbeb;--eve-mid:#fde68a;
+  --mono:'Courier New',monospace;--radius:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh;}
+
+.hdr{background:var(--white);border-bottom:1px solid var(--border);padding:13px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.hdr-title{font-size:15px;font-weight:800;color:var(--text);}
+.hdr-title small{font-size:11px;font-weight:400;color:var(--muted);margin-left:8px;}
+
+.main{max-width:860px;margin:0 auto;padding:16px 14px 60px;}
+.sec{display:flex;align-items:center;gap:8px;margin:20px 0 10px;}
+.sec-num{width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sec-title{font-size:13px;font-weight:700;color:var(--text);}
+.sec-desc{font-size:11px;color:var(--muted);margin-left:auto;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:10px;box-shadow:var(--shadow);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+@media(max-width:600px){.g2,.g3{grid-template-columns:1fr 1fr;}.g6{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:400px){.g6{grid-template-columns:repeat(2,1fr);}}
+
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:11px;color:var(--sub);font-weight:600;}
+.field input,.field select{background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:var(--mono);font-weight:600;color:var(--text);width:100%;transition:border-color .15s,background .15s;-moz-appearance:textfield;-webkit-appearance:none;}
+.field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);background:var(--white);}
+.hint{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* 曜日タイプ別カラー */
+.day-field label{font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;margin-bottom:2px;display:inline-block;}
+.day-field.wd label{color:var(--sub);background:var(--bg);}
+.day-field.fri label{color:var(--fri);background:var(--fri-bg);}
+.day-field.sat label{color:var(--sat);background:var(--sat-bg);}
+.day-field.sun label{color:var(--sun);background:var(--sun-bg);}
+.day-field.hol label{color:var(--hol);background:var(--hol-bg);}
+.day-field.eve label{color:var(--eve);background:var(--eve-bg);}
+.day-field.wd  input{border-color:var(--border);}
+.day-field.fri input{border-color:var(--fri-mid);}
+.day-field.sat input{border-color:var(--sat-mid);}
+.day-field.sun input{border-color:var(--sun-mid);}
+.day-field.hol input{border-color:var(--hol-mid);}
+.day-field.eve input{border-color:var(--eve-mid);}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#2563eb 100%);border-radius:var(--radius);padding:20px;margin-bottom:10px;box-shadow:0 4px 20px rgba(37,99,235,.3);}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;}
+.hero-main-lbl{font-size:11px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:4px;}
+.hero-main-val{font-family:var(--mono);font-size:38px;font-weight:800;color:#fff;line-height:1;}
+.hero-main-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;}
+.hero-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{background:rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;min-width:100px;}
+.chip-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.55);text-transform:uppercase;margin-bottom:2px;}
+.chip-val{font-family:var(--mono);font-size:17px;font-weight:700;color:#fff;line-height:1.1;}
+.chip-sub{font-size:9px;color:rgba(255,255,255,.45);margin-top:2px;}
+.gauge-wrap{background:rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;}
+.gauge-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.gauge-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);}
+.gauge-badge{font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:rgba(191,219,254,.2);color:#bfdbfe;}
+.gauge-scale{display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.3);margin-bottom:3px;}
+.gauge-track{height:12px;background:rgba(0,0,0,.3);border-radius:6px;position:relative;overflow:visible;}
+.gauge-fill{height:100%;border-radius:6px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.gauge-tgt{position:absolute;top:-4px;bottom:-4px;width:3px;background:#fff;opacity:.6;border-radius:2px;transition:left .3s;}
+.gauge-tgt::after{content:attr(data-lbl);position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,.6);white-space:nowrap;}
+.gauge-note{font-size:11px;color:rgba(255,255,255,.7);margin-top:8px;line-height:1.5;}
+
+/* 日数カウント表示 */
+.day-count-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;}
+@media(max-width:600px){.day-count-grid{grid-template-columns:repeat(3,1fr);}}
+.dc-card{border-radius:8px;padding:8px 10px;text-align:center;border:1px solid transparent;}
+.dc-card.wd {background:var(--bg);    border-color:var(--border);}
+.dc-card.fri{background:var(--fri-bg);border-color:var(--fri-mid);}
+.dc-card.sat{background:var(--sat-bg);border-color:var(--sat-mid);}
+.dc-card.sun{background:var(--sun-bg);border-color:var(--sun-mid);}
+.dc-card.hol{background:var(--hol-bg);border-color:var(--hol-mid);}
+.dc-card.eve{background:var(--eve-bg);border-color:var(--eve-mid);}
+.dc-lbl{font-size:9px;font-weight:700;letter-spacing:.05em;}
+.dc-card.wd  .dc-lbl{color:var(--sub);}
+.dc-card.fri .dc-lbl{color:var(--fri);}
+.dc-card.sat .dc-lbl{color:var(--sat);}
+.dc-card.sun .dc-lbl{color:var(--sun);}
+.dc-card.hol .dc-lbl{color:var(--hol);}
+.dc-card.eve .dc-lbl{color:var(--eve);}
+.dc-num{font-family:var(--mono);font-size:22px;font-weight:800;line-height:1.1;color:var(--text);}
+.dc-sub{font-size:9px;color:var(--muted);}
+
+/* 日別目安テーブル */
+.day-table{width:100%;border-collapse:collapse;background:var(--white);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:10px;}
+.day-table th{padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--border);text-align:left;}
+.day-table td{padding:9px 12px;font-size:12px;border-bottom:1px solid var(--border);}
+.day-table tr:last-child td{border-bottom:none;}
+.day-table .tdr{font-family:var(--mono);font-weight:700;text-align:right;color:var(--text);}
+.day-table .tdr.hl{color:var(--blue);font-size:13px;}
+.day-table .type-tag{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;}
+.tt-wd {background:var(--bg);    color:var(--sub);}
+.tt-fri{background:var(--fri-bg);color:var(--fri);}
+.tt-sat{background:var(--sat-bg);color:var(--sat);}
+.tt-sun{background:var(--sun-bg);color:var(--sun);}
+.tt-hol{background:var(--hol-bg);color:var(--hol);}
+.tt-eve{background:var(--eve-bg);color:var(--eve);}
+
+/* 実績チェッカー */
+.tracker{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px;box-shadow:var(--shadow);}
+.period-tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);}
+.ptab{background:transparent;border:none;border-bottom:2px solid transparent;padding:11px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:.15s;text-align:center;}
+.ptab.active{background:var(--white);color:var(--blue);border-bottom-color:var(--blue);}
+.tracker-body{padding:16px;}
+.tip{background:var(--blue-bg);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--blue);line-height:1.6;}
+.budget-bar{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;}
+.budget-bar-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.budget-formula{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.bfi{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center;}
+.bfi .bf-lbl{font-size:9px;color:var(--muted);font-weight:600;}
+.bfi .bf-val{font-family:var(--mono);font-size:14px;font-weight:800;color:var(--text);}
+.bfi.result{background:var(--blue-bg);border-color:var(--blue-mid);}
+.bfi.result .bf-val{color:var(--blue);}
+.bop{font-size:16px;color:var(--muted);}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+@media(max-width:480px){.result-grid{grid-template-columns:1fr;}}
+.verdict-card{border-radius:12px;padding:16px;border:2px solid transparent;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+.verdict-card.ok  {background:var(--ok-bg);  border-color:var(--ok-mid);}
+.verdict-card.caut{background:var(--caut-bg);border-color:var(--caut-mid);}
+.verdict-card.warn{background:var(--warn-bg);border-color:var(--warn-mid);}
+.verdict-icon{font-size:34px;flex-shrink:0;line-height:1;}
+.verdict-title{font-size:15px;font-weight:800;margin-bottom:2px;}
+.verdict-title.ok{color:var(--ok);}
+.verdict-title.caut{color:var(--caut);}
+.verdict-title.warn{color:var(--warn);}
+.verdict-sub{font-size:11px;line-height:1.6;}
+.verdict-sub.ok{color:#1e40af;}
+.verdict-sub.caut{color:#92400e;}
+.verdict-sub.warn{color:#991b1b;}
+.r-card{border-radius:10px;padding:12px 14px;border:1.5px solid transparent;}
+.r-card.ok  {background:var(--ok-bg);  border-color:var(--ok-mid);}
+.r-card.caut{background:var(--caut-bg);border-color:var(--caut-mid);}
+.r-card.warn{background:var(--warn-bg);border-color:var(--warn-mid);}
+.r-card.neut{background:var(--bg);border-color:var(--border);}
+.r-lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;color:var(--sub);}
+.r-val{font-family:var(--mono);font-size:20px;font-weight:800;line-height:1;}
+.r-val.ok{color:var(--ok);}
+.r-val.caut{color:var(--caut);}
+.r-val.warn{color:var(--warn);}
+.r-val.neut{color:var(--text);}
+.r-sub{font-size:10px;color:var(--sub);margin-top:3px;}
+.pbar-wrap{background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:4px;}
+.pbar-header{display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600;}
+.pbar-track{height:12px;background:var(--border);border-radius:6px;position:relative;overflow:visible;}
+.pbar-fill{height:100%;border-radius:6px;transition:width .5s ease;}
+.pbar-tgt{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--text);opacity:.2;border-radius:2px;}
+.pbar-tgt::after{content:attr(data-lbl);position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--muted);white-space:nowrap;}
+.pbar-foot{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;}
+
+.breakdown{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+.breakdown table{width:100%;border-collapse:collapse;}
+.breakdown td{padding:9px 14px;font-size:12px;border-bottom:1px solid var(--border);}
+.breakdown tr:last-child td{border-bottom:none;}
+.tdl{color:var(--sub);}
+.tdr2{font-family:var(--mono);font-weight:700;text-align:right;color:var(--text);}
+.breakdown tr.sh td{background:var(--bg);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:5px 14px;}
+.breakdown tr.tr-total td{background:var(--blue-bg);}
+.breakdown tr.tr-total .tdl{color:var(--blue);font-weight:700;}
+.breakdown tr.tr-total .tdr2{color:var(--blue);font-size:13px;}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-title">人件費シミュレーター <small>店舗PL管理ツール</small></div>
+</div>
+
+<div class="main">
+
+<!-- ═══ STEP 1 ═══ -->
+<div class="sec">
+  <div class="sec-num">1</div>
+  <div class="sec-title">月次の基本設定</div>
+  <div class="sec-desc">月と基本情報を入力</div>
+</div>
+
+<div class="card">
+  <div class="g3" style="margin-bottom:12px;">
+    <div class="field">
+      <label>📅 対象月を選択</label>
+      <select id="sel-month" onchange="onMonthChange()">
+        <option value="2026-7">2026年7月</option>
+        <option value="2026-8">2026年8月</option>
+        <option value="2026-9">2026年9月</option>
+        <option value="2026-10">2026年10月</option>
+        <option value="2026-11">2026年11月</option>
+        <option value="2026-12">2026年12月</option>
+        <option value="2027-1">2027年1月</option>
+        <option value="2027-2">2027年2月</option>
+        <option value="2027-3">2027年3月</option>
+        <option value="2027-4">2027年4月</option>
+        <option value="2027-5">2027年5月</option>
+        <option value="2027-6">2027年6月</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>📊 月商（売上目標）</label>
+      <input type="number" id="monthly-sales" value="5000000" step="100000" oninput="calc()">
+    </div>
+    <div class="field">
+      <label>🎯 目標L値（%）</label>
+      <input type="number" id="target-l" value="30" step="0.5" min="1" max="60" oninput="calc()">
+    </div>
+  </div>
+  <div class="g3">
+    <div class="field">
+      <label>👤 社員数（人）</label>
+      <input type="number" id="staff-count" value="2" min="0" oninput="calc()">
+    </div>
+    <div class="field">
+      <label>💴 平均時給（円）</label>
+      <input type="number" id="wage" value="1200" step="10" oninput="calc()">
+    </div>
+  </div>
+</div>
+
+<!-- 日数カウント表示 -->
+<div class="day-count-grid">
+  <div class="dc-card wd" ><div class="dc-lbl">平日（月〜木）</div><div class="dc-num" id="cnt-wd" >0</div><div class="dc-sub">日</div></div>
+  <div class="dc-card fri"><div class="dc-lbl">金曜日</div>        <div class="dc-num" id="cnt-fri">0</div><div class="dc-sub">日</div></div>
+  <div class="dc-card sat"><div class="dc-lbl">土曜日</div>        <div class="dc-num" id="cnt-sat">0</div><div class="dc-sub">日</div></div>
+  <div class="dc-card sun"><div class="dc-lbl">日曜日</div>        <div class="dc-num" id="cnt-sun">0</div><div class="dc-sub">日</div></div>
+  <div class="dc-card hol"><div class="dc-lbl">祝日（単独）</div> <div class="dc-num" id="cnt-hol">0</div><div class="dc-sub">日</div></div>
+  <div class="dc-card eve"><div class="dc-lbl">祝前日</div>        <div class="dc-num" id="cnt-eve">0</div><div class="dc-sub">日</div></div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-top">
+    <div class="hero-main">
+      <div class="hero-main-lbl">人件費 予算額</div>
+      <div class="hero-main-val" id="hero-budget">¥—</div>
+      <div class="hero-main-sub" id="hero-budget-sub">目標L値 × 月商</div>
+    </div>
+    <div class="hero-chips">
+      <div class="chip">
+        <div class="chip-lbl">社員固定給</div>
+        <div class="chip-val" id="hero-staff">¥—</div>
+        <div class="chip-sub">社員数 × 30万円</div>
+      </div>
+      <div class="chip">
+        <div class="chip-lbl">アルバイト使える予算</div>
+        <div class="chip-val" id="hero-part">¥—</div>
+        <div class="chip-sub">予算 − 社員固定給</div>
+      </div>
+      <div class="chip">
+        <div class="chip-lbl">総営業日数</div>
+        <div class="chip-val" id="hero-days">—日</div>
+        <div class="chip-sub" id="hero-month-lbl">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="gauge-wrap">
+    <div class="gauge-header">
+      <div class="gauge-title">目標L値ゲージ</div>
+      <div class="gauge-badge" id="gauge-badge">目標 30%</div>
+    </div>
+    <div class="gauge-scale"><span>0%</span><span>15%</span><span>30%</span><span>45%</span><span>60%</span></div>
+    <div class="gauge-track">
+      <div class="gauge-fill" id="gauge-fill" style="width:50%;background:#93c5fd;"></div>
+      <div class="gauge-tgt"  id="gauge-tgt"  data-lbl="目標" style="left:50%"></div>
+    </div>
+    <div class="gauge-note" id="gauge-note">月と基本情報を入力すると予算が確定します。</div>
+  </div>
+</div>
+
+<!-- ═══ STEP 2 ═══ -->
+<div class="sec">
+  <div class="sec-num">2</div>
+  <div class="sec-title">曜日別 売上・予算設定</div>
+  <div class="sec-desc">売上係数を手入力（平日を基準に設定）</div>
+</div>
+
+<div class="card">
+  <div style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.6;">
+    📝 各曜日区分の <b>1日あたり想定売上</b> を入力してください。入力値をもとにアルバイト許容コスト・許容時間を自動計算します。
+  </div>
+  <div class="g6">
+    <div class="field day-field wd" >
+      <label>平日（月〜木）</label>
+      <input type="number" id="sales-wd"  value="150000" step="5000" oninput="calc()">
+    </div>
+    <div class="field day-field fri">
+      <label>金曜日</label>
+      <input type="number" id="sales-fri" value="200000" step="5000" oninput="calc()">
+    </div>
+    <div class="field day-field sat">
+      <label>土曜日</label>
+      <input type="number" id="sales-sat" value="250000" step="5000" oninput="calc()">
+    </div>
+    <div class="field day-field sun">
+      <label>日曜日</label>
+      <input type="number" id="sales-sun" value="220000" step="5000" oninput="calc()">
+    </div>
+    <div class="field day-field hol">
+      <label>祝日（単独）</label>
+      <input type="number" id="sales-hol" value="230000" step="5000" oninput="calc()">
+    </div>
+    <div class="field day-field eve">
+      <label>祝前日</label>
+      <input type="number" id="sales-eve" value="210000" step="5000" oninput="calc()">
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STEP 3: 1日あたり目安 ═══ -->
+<div class="sec">
+  <div class="sec-num">3</div>
+  <div class="sec-title">1日あたりの目安（自動計算）</div>
+  <div class="sec-desc">曜日区分ごとのアルバイト許容コスト・時間</div>
+</div>
+
+<table class="day-table">
+  <thead>
+    <tr>
+      <th>曜日区分</th>
+      <th style="text-align:right">日数</th>
+      <th style="text-align:right">売上目安/日</th>
+      <th style="text-align:right">人件費予算/日</th>
+      <th style="text-align:right">社員コスト/日</th>
+      <th style="text-align:right">アルバイト許容コスト</th>
+      <th style="text-align:right">アルバイト許容時間</th>
+    </tr>
+  </thead>
+  <tbody id="day-table-body"></tbody>
+  <tfoot>
+    <tr style="background:var(--blue-bg);border-top:2px solid var(--blue-mid);">
+      <td colspan="2" style="padding:9px 12px;font-size:12px;font-weight:700;color:var(--blue);">月次合計</td>
+      <td class="tdr" style="padding:9px 12px;font-family:var(--mono);font-weight:700;text-align:right;color:var(--text);" id="ft-sales">—</td>
+      <td class="tdr" style="padding:9px 12px;font-family:var(--mono);font-weight:700;text-align:right;color:var(--text);" id="ft-budget">—</td>
+      <td class="tdr" style="padding:9px 12px;font-family:var(--mono);font-weight:700;text-align:right;color:var(--text);" id="ft-staff">—</td>
+      <td class="tdr" style="padding:9px 12px;font-family:var(--mono);font-weight:700;text-align:right;color:var(--blue);font-size:13px;" id="ft-part">—</td>
+      <td class="tdr" style="padding:9px 12px;font-family:var(--mono);font-weight:700;text-align:right;color:var(--blue);" id="ft-hours">—</td>
+    </tr>
+  </tfoot>
+</table>
+
+<!-- ═══ STEP 4: 半月チェッカー ═══ -->
+<div class="sec">
+  <div class="sec-num">4</div>
+  <div class="sec-title">半月 実績チェッカー</div>
+  <div class="sec-desc">シフト管理画面の数字をそのまま入力するだけ</div>
+</div>
+
+<div class="tracker">
+  <div class="period-tabs">
+    <button class="ptab active" id="tab-h1" onclick="switchPeriod('h1')">前半（1〜15日）</button>
+    <button class="ptab"        id="tab-h2" onclick="switchPeriod('h2')">後半（16〜末日）</button>
+  </div>
+  <div class="tracker-body">
+
+    <!-- 前半 -->
+    <div id="period-h1">
+      <div class="tip">💡「人件費の内訳」→ 表示期間を <b>1〜15日</b> に設定し、アルアルバイト合計を入力してください。</div>
+      <div class="budget-bar">
+        <div class="budget-bar-title">この期間のアルバイト許容予算（自動計算）</div>
+        <div class="budget-formula">
+          <div class="bfi"><div class="bf-lbl">人件費予算（前半分）</div><div class="bf-val" id="h1-bf-total">—</div></div>
+          <div class="bop">−</div>
+          <div class="bfi"><div class="bf-lbl">社員固定給（前半分）</div><div class="bf-val" id="h1-bf-staff">—</div></div>
+          <div class="bop">=</div>
+          <div class="bfi result"><div class="bf-lbl">アルバイト 許容額</div><div class="bf-val" id="h1-bf-part">—</div></div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>💰 アルアルバイト人件費 合計（円）</label>
+          <input type="number" id="h1-cost" value="" step="10000" placeholder="例: 480,000" oninput="calcTracker()">
+          <span class="hint">「雇用形態別」のアルアルバイト欄の合計を入力</span>
+        </div>
+        <div class="field">
+          <label>📈 実績売上 合計（円）※任意</label>
+          <input type="number" id="h1-sales" value="" step="10000" placeholder="入力すると参考L値を表示" oninput="calcTracker()">
+        </div>
+      </div>
+    </div>
+
+    <!-- 後半 -->
+    <div id="period-h2" class="hidden">
+      <div class="tip">💡「人件費の内訳」→ 表示期間を <b>16〜末日</b> に設定し、アルアルバイト合計を入力してください。</div>
+      <div class="budget-bar">
+        <div class="budget-bar-title">この期間のアルバイト許容予算（自動計算）</div>
+        <div class="budget-formula">
+          <div class="bfi"><div class="bf-lbl">人件費予算（後半分）</div><div class="bf-val" id="h2-bf-total">—</div></div>
+          <div class="bop">−</div>
+          <div class="bfi"><div class="bf-lbl">社員固定給（後半分）</div><div class="bf-val" id="h2-bf-staff">—</div></div>
+          <div class="bop">=</div>
+          <div class="bfi result"><div class="bf-lbl">アルバイト 許容額</div><div class="bf-val" id="h2-bf-part">—</div></div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>💰 アルアルバイト人件費 合計（円）</label>
+          <input type="number" id="h2-cost" value="" step="10000" placeholder="例: 480,000" oninput="calcTracker()">
+          <span class="hint">「雇用形態別」のアルアルバイト欄の合計を入力</span>
+        </div>
+        <div class="field">
+          <label>📈 実績売上 合計（円）※任意</label>
+          <input type="number" id="h2-sales" value="" step="10000" placeholder="入力すると参考L値を表示" oninput="calcTracker()">
+        </div>
+      </div>
+    </div>
+
+    <!-- 結果 -->
+    <div id="tracker-out" class="hidden" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+      <div class="verdict-card" id="vc">
+        <div class="verdict-icon" id="vi">—</div>
+        <div>
+          <div class="verdict-title" id="vt">—</div>
+          <div class="verdict-sub"   id="vs">—</div>
+        </div>
+      </div>
+      <div class="result-grid">
+        <div class="r-card neut" id="rc1"><div class="r-lbl">実績 アルバイト人件費</div><div class="r-val neut" id="rv1">—</div><div class="r-sub">入力値</div></div>
+        <div class="r-card neut" id="rc2"><div class="r-lbl">アルバイト 許容予算</div><div class="r-val neut" id="rv2">—</div><div class="r-sub">予算 − 社員固定給（半月分）</div></div>
+        <div class="r-card neut" id="rc3"><div class="r-lbl">差額（＋超過 / −余裕）</div><div class="r-val neut" id="rv3">—</div><div class="r-sub" id="rs3">—</div></div>
+        <div class="r-card neut" id="rc4"><div class="r-lbl">超過率</div><div class="r-val neut" id="rv4">—</div><div class="r-sub" id="rs4">—</div></div>
+      </div>
+      <div id="l-ref-wrap" class="hidden" style="margin-bottom:10px;">
+        <div class="r-card neut" style="display:flex;align-items:center;justify-content:space-between;">
+          <div><div class="r-lbl">参考 アルバイトL値</div><div class="r-sub" id="rs-l">—</div></div>
+          <div class="r-val neut" id="rv-l" style="font-size:22px;">—</div>
+        </div>
+      </div>
+      <div class="pbar-wrap">
+        <div class="pbar-header"><span>アルバイト人件費 使用率（許容予算 = 100%）</span><span id="pb-txt">—</span></div>
+        <div class="pbar-track">
+          <div class="pbar-fill" id="pb-fill" style="width:0%"></div>
+          <div class="pbar-tgt"  id="pb-tgt"  data-lbl="許容予算" style="left:66.7%"></div>
+        </div>
+        <div class="pbar-foot"><span>¥0</span><span id="pb-max-lbl">—</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ STEP 5 ═══ -->
+<div class="sec">
+  <div class="sec-num">5</div>
+  <div class="sec-title">月次 予算サマリー</div>
+  <div class="sec-desc">設定値の確認用</div>
+</div>
+<div class="breakdown">
+  <table>
+    <tr class="sh"><td class="tdl" colspan="2">基本設定</td></tr>
+    <tr><td class="tdl">対象月</td>                                   <td class="tdr2" id="b-month">—</td></tr>
+    <tr><td class="tdl">月商（設定値）</td>                           <td class="tdr2" id="b-sales">—</td></tr>
+    <tr><td class="tdl">目標L値</td>                                  <td class="tdr2" id="b-tl">—</td></tr>
+    <tr><td class="tdl">総営業日数</td>                               <td class="tdr2" id="b-days">—</td></tr>
+    <tr class="sh"><td class="tdl" colspan="2">人件費予算の内訳</td></tr>
+    <tr><td class="tdl">人件費 予算総額</td>                          <td class="tdr2" id="b-bud">—</td></tr>
+    <tr><td class="tdl">社員固定給（<span id="b-sn">—</span>名 × ¥300,000）</td><td class="tdr2" id="b-staff">—</td></tr>
+    <tr class="tr-total"><td class="tdl">アルバイト 使える予算（月計）</td><td class="tdr2" id="b-part">—</td></tr>
+  </table>
+</div>
+
+</div><!-- /main -->
+
+<script>
+const $  = id => document.getElementById(id);
+const n  = id => parseFloat($(id).value)||0;
+const yen= v  => '¥'+Math.round(v).toLocaleString('ja-JP');
+const pct= v  => (v*100).toFixed(1)+'%';
+const hrs= v  => v.toFixed(1)+' h';
+
+/* ══════════════════════════════
+   祝日データ（2026年7月〜2027年6月）
+   形式: 'YYYY-M-D'
+══════════════════════════════ */
+const HOLIDAYS = new Set([
+  // 2026年
+  '2026-7-20',  // 月 海の日
+  '2026-8-11',  // 火 山の日
+  '2026-9-21',  // 月 敬老の日
+  '2026-9-23',  // 水 秋分の日
+  '2026-10-12', // 月 スポーツの日
+  '2026-11-3',  // 火 文化の日
+  '2026-11-23', // 月 勤労感謝の日
+  // 2027年
+  '2027-1-1',   // 金 元日
+  '2027-1-11',  // 月 成人の日
+  '2027-2-11',  // 木 建国記念の日
+  '2027-2-23',  // 火 天皇誕生日
+  '2027-3-21',  // 日 春分の日
+  '2027-3-22',  // 月 振替休日（春分の日）
+  '2027-4-29',  // 木 昭和の日
+  '2027-5-3',   // 月 憲法記念日
+  '2027-5-4',   // 火 みどりの日
+  '2027-5-5',   // 水 こどもの日
+]);
+
+function isHoliday(date){
+  return HOLIDAYS.has(`${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`);
+}
+
+/* 日付の種別を返す
+   返り値: 'wd'|'fri'|'sat'|'sun'|'hol'|'eve'
+   優先順位:
+     1. 当日が祝日 → hol（土=sat, 日=sunとして扱う）
+     2. 当日が土曜 → sat
+     3. 当日が日曜 → sun
+     4. 当日が平日（月〜金）かつ翌日が祝日（翌日が土日でない） → eve
+        ※ 当日が土日の場合は祝前日扱いしない
+     5. 当日が金曜 → fri
+     6. それ以外  → wd
+*/
+function getDayType(date){
+  const dow = date.getDay(); // 0=日,1=月,...,6=土
+  const hol = isHoliday(date);
+
+  // 翌日チェック（祝前日判定用）
+  const tomorrow = new Date(date);
+  tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowHol = isHoliday(tomorrow);
+  const tomorrowDow = tomorrow.getDay();
+
+  // 1. 当日が祝日
+  if(hol){
+    if(dow===6) return 'sat'; // 土曜祝 → 土曜扱い
+    if(dow===0) return 'sun'; // 日曜祝 → 日曜扱い（振替は別日）
+    return 'hol';             // 平日祝 → 祝日
+  }
+
+  // 2-3. 土日
+  if(dow===6) return 'sat';
+  if(dow===0) return 'sun';
+
+  // 4. 祝前日判定
+  //    条件: 当日が平日（月〜金）かつ 翌日が祝日 かつ 翌日が土日でない
+  if(tomorrowHol && tomorrowDow!==0 && tomorrowDow!==6){
+    return 'eve';
+  }
+
+  // 5. 金曜
+  if(dow===5) return 'fri';
+
+  // 6. 平日（月〜木）
+  return 'wd';
+}
+
+/* 月の全日付を分類してカウント */
+function countDaysInMonth(year, month){
+  const counts = {wd:0, fri:0, sat:0, sun:0, hol:0, eve:0};
+  const daysInMonth = new Date(year, month, 0).getDate();
+  for(let d=1; d<=daysInMonth; d++){
+    const date = new Date(year, month-1, d);
+    counts[getDayType(date)]++;
+  }
+  return counts;
+}
+
+/* 前半(1〜15)・後半(16〜末)の日数カウント */
+function countHalfMonth(year, month, isFirst){
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const start = isFirst ? 1 : 16;
+  const end   = isFirst ? 15 : daysInMonth;
+  const counts = {wd:0, fri:0, sat:0, sun:0, hol:0, eve:0};
+  for(let d=start; d<=end; d++){
+    const date = new Date(year, month-1, d);
+    counts[getDayType(date)]++;
+  }
+  return counts;
+}
+
+const TYPE_INFO = {
+  wd:  { label:'平日（月〜木）', cls:'tt-wd',  salesId:'sales-wd'  },
+  fri: { label:'金曜日',         cls:'tt-fri', salesId:'sales-fri' },
+  sat: { label:'土曜日',         cls:'tt-sat', salesId:'sales-sat' },
+  sun: { label:'日曜日',         cls:'tt-sun', salesId:'sales-sun' },
+  hol: { label:'祝日（単独）',   cls:'tt-hol', salesId:'sales-hol' },
+  eve: { label:'祝前日',         cls:'tt-eve', salesId:'sales-eve' },
+};
+const TYPE_ORDER = ['wd','fri','sat','sun','hol','eve'];
+
+let currentCounts = {wd:0,fri:0,sat:0,sun:0,hol:0,eve:0};
+let period = 'h1';
+
+function getYearMonth(){
+  const [y,m] = $('sel-month').value.split('-').map(Number);
+  return {year:y, month:m};
+}
+
+function onMonthChange(){
+  const {year, month} = getYearMonth();
+  currentCounts = countDaysInMonth(year, month);
+  // カウント表示更新
+  TYPE_ORDER.forEach(t=>{
+    $('cnt-'+t).textContent = currentCounts[t];
+  });
+  calc();
+}
+
+function switchPeriod(p){
+  period = p;
+  ['h1','h2'].forEach(k=>{
+    $('period-'+k).classList.toggle('hidden', k!==p);
+    $('tab-'+k).classList.toggle('active', k===p);
+  });
+  calcTracker();
+}
+
+/* ── メイン計算 ── */
+function calc(){
+  const {year, month} = getYearMonth();
+  const tL    = n('target-l')/100;
+  const wage  = n('wage');
+  const sc    = n('staff-count');
+  const ms    = n('monthly-sales');
+  const bud   = ms * tL;
+  const sCost = sc * 300000;
+  const pBud  = bud - sCost;
+
+  // 各タイプの1日売上・日数
+  const cnts  = currentCounts;
+  const totalDays = TYPE_ORDER.reduce((a,t)=>a+cnts[t],0);
+
+  // 月間想定売上（入力売上×日数の合計）
+  let totalSalesCalc = 0;
+  TYPE_ORDER.forEach(t=>{
+    totalSalesCalc += n(TYPE_INFO[t].salesId) * cnts[t];
+  });
+
+  // 売上シェアに応じてアルバイト予算を按分
+  // 各タイプの1日あたりアルバイト許容 = pBud × (typeの売上シェア) / 日数
+  const dayData = {};
+  TYPE_ORDER.forEach(t=>{
+    const dayS   = n(TYPE_INFO[t].salesId);
+    const typeTotal = dayS * cnts[t];
+    const share  = totalSalesCalc>0 ? typeTotal/totalSalesCalc : 0;
+    const staffDay = cnts[t]>0 ? sCost*share/cnts[t] : 0;
+    const partDay  = cnts[t]>0 ? pBud*share/cnts[t]  : 0;
+    const budDay   = staffDay + partDay;
+    const hoursDay = wage>0 ? partDay/wage : 0;
+    dayData[t] = { dayS, cnt:cnts[t], share, staffDay, partDay, budDay, hoursDay };
+  });
+
+  // テーブル描画
+  let rows = '';
+  let totalSalesRow=0, totalBudRow=0, totalStaffRow=0, totalPartRow=0;
+  TYPE_ORDER.forEach(t=>{
+    const d = dayData[t];
+    if(d.cnt===0) return; // その月に存在しない曜日区分は非表示
+    totalSalesRow += d.dayS * d.cnt;
+    totalBudRow   += d.budDay * d.cnt;
+    totalStaffRow += d.staffDay * d.cnt;
+    totalPartRow  += d.partDay * d.cnt;
+    rows += `<tr>
+      <td><span class="type-tag ${TYPE_INFO[t].cls}">${TYPE_INFO[t].label}</span></td>
+      <td class="tdr">${d.cnt}日</td>
+      <td class="tdr">${yen(d.dayS)}</td>
+      <td class="tdr">${yen(Math.round(d.budDay))}</td>
+      <td class="tdr">${yen(Math.round(d.staffDay))}</td>
+      <td class="tdr hl">${yen(Math.round(d.partDay))}</td>
+      <td class="tdr hl">${wage>0?hrs(d.hoursDay):'—'}</td>
+    </tr>`;
+  });
+  $('day-table-body').innerHTML = rows;
+  $('ft-sales').textContent  = yen(totalSalesRow);
+  $('ft-budget').textContent = yen(Math.round(totalBudRow));
+  $('ft-staff').textContent  = yen(Math.round(totalStaffRow));
+  $('ft-part').textContent   = yen(Math.round(totalPartRow));
+  // 合計許容時間（アルバイト許容コスト合計÷時給）
+  $('ft-hours').textContent  = wage>0 ? hrs(totalPartRow/wage) : '—';
+
+  // HERO
+  const monthLabel = $('sel-month').options[$('sel-month').selectedIndex].text;
+  $('hero-budget').textContent     = yen(bud);
+  $('hero-budget-sub').textContent = `月商 ${yen(ms)} × L値 ${(tL*100).toFixed(1)}%`;
+  $('hero-staff').textContent      = yen(sCost);
+  $('hero-part').textContent       = yen(pBud);
+  $('hero-days').textContent       = totalDays+'日';
+  $('hero-month-lbl').textContent  = monthLabel;
+  $('gauge-fill').style.width      = (tL/0.6*100)+'%';
+  $('gauge-tgt').style.left        = (tL/0.6*100)+'%';
+  $('gauge-tgt').setAttribute('data-lbl','目標 '+pct(tL));
+  $('gauge-badge').textContent     = '目標 '+pct(tL);
+  $('gauge-note').textContent      = `人件費予算 ${yen(bud)} ／ 社員固定給 ${yen(sCost)} ／ アルバイト使える予算 ${yen(pBud)}`;
+
+  // サマリー
+  $('b-month').textContent  = monthLabel;
+  $('b-sales').textContent  = yen(ms);
+  $('b-tl').textContent     = pct(tL);
+  $('b-days').textContent   = `${totalDays}日（${TYPE_ORDER.filter(t=>cnts[t]>0).map(t=>`${TYPE_INFO[t].label} ${cnts[t]}日`).join(' / ')}）`;
+  $('b-bud').textContent    = yen(bud);
+  $('b-sn').textContent     = sc;
+  $('b-staff').textContent  = yen(sCost);
+  $('b-part').textContent   = yen(pBud);
+
+  updateTrackerBudget();
+  calcTracker();
+}
+
+/* ── 半月の予算計算 ── */
+function updateTrackerBudget(){
+  const {year, month} = getYearMonth();
+  const tL    = n('target-l')/100;
+  const sc    = n('staff-count');
+  const ms    = n('monthly-sales');
+  const wage  = n('wage');
+  const bud   = ms * tL;
+  const sCost = sc * 300000;
+  const pBud  = bud - sCost;
+
+  const totalDays = TYPE_ORDER.reduce((a,t)=>a+currentCounts[t],0);
+
+  ['h1','h2'].forEach((p,i)=>{
+    const hCnts = countHalfMonth(year, month, i===0);
+    const hDays = TYPE_ORDER.reduce((a,t)=>a+hCnts[t],0);
+    const ratio = totalDays>0 ? hDays/totalDays : 0.5;
+    const hBud  = bud   * ratio;
+    const hS    = sCost * ratio;
+    const hP    = pBud  * ratio;
+    $(p+'-bf-total').textContent = yen(Math.round(hBud));
+    $(p+'-bf-staff').textContent = yen(Math.round(hS));
+    $(p+'-bf-part').textContent  = yen(Math.round(hP));
+    // グローバルに保持
+    window['_hAllow_'+p] = hP;
+    window['_hBud_'+p]   = hBud;
+    window['_hS_'+p]     = hS;
+  });
+}
+
+/* ── 実績チェッカー ── */
+function calcTracker(){
+  const p       = period;
+  const actCost = n(p+'-cost');
+  if(actCost<=0){ $('tracker-out').classList.add('hidden'); return; }
+  $('tracker-out').classList.remove('hidden');
+
+  const hAllow  = window['_hAllow_'+p] || 0;
+  const hBud    = window['_hBud_'+p]   || 0;
+  const tL      = n('target-l')/100;
+  const ms      = n('monthly-sales');
+
+  // 差額（アルバイト許容予算との比較）
+  const over = actCost - hAllow;
+
+  // ── L値ベースの超過率計算 ──
+  // 実績売上があればそれを使用、なければ半月分の売上目標で推計
+  const actSales = n(p+'-sales');
+  const useSales = actSales > 0 ? actSales : hBud / tL; // 売上目標 = 人件費予算 ÷ L値
+  const actL     = useSales > 0 ? actCost / useSales : 0;  // アルバイト人件費だけのL値（参考）
+
+  // 総人件費L値で比較するため、社員固定給の半月分を加算して総コストL値を推計
+  const hS        = window['_hS_'+p] || 0;
+  const totalActL = useSales > 0 ? (actCost + hS) / useSales : 0; // 社員込み総L値
+  const lDiff     = totalActL - tL; // 目標L値との乖離（ptで表現）
+
+  // 判定：lDiff（目標L値との乖離）で判断
+  let cls, icon, title, sub;
+  if(lDiff > 0.02){
+    cls='warn'; icon='🔴'; title='目標L値超過（+2pt超）';
+    sub=`目標L値より ${ptStr(lDiff)} 超過。アルバイト人件費 ${yen(Math.abs(over))} のオーバーです。シフト削減が必要です。`;
+  } else if(lDiff > 0.01){
+    cls='caut'; icon='🟠'; title='やや超過（+1〜2pt）';
+    sub=`目標L値より ${ptStr(lDiff)} 超過。アルバイト人件費 ${yen(Math.abs(over))} のオーバー。注意が必要です。`;
+  } else {
+    cls='ok'; icon='🔵'; title='予算内';
+    sub = lDiff < 0
+      ? `目標L値を ${ptStr(Math.abs(lDiff))} 下回っています。アルバイト人件費 ${yen(Math.abs(over))} の余裕あり。`
+      : `目標L値とほぼ一致しています。`;
+  }
+
+  $('vc').className   = 'verdict-card '+cls;
+  $('vi').textContent = icon;
+  $('vt').className   = 'verdict-title '+cls; $('vt').textContent = title;
+  $('vs').className   = 'verdict-sub '+cls;   $('vs').textContent = sub;
+
+  function sc2(id,valId,subId,val,sub2,c){
+    $(id).className='r-card '+(c||'neut');
+    $(valId).className='r-val '+(c||'neut');
+    $(valId).textContent=val;
+    if(subId)$(subId).textContent=sub2;
+  }
+  function ptStr(v){ return (v*100).toFixed(1)+'pt'; }
+  const signL = lDiff>=0?'+':'-';
+
+  sc2('rc1','rv1',null,yen(actCost),null,'neut');
+  sc2('rc2','rv2',null,yen(Math.round(hAllow)),null,'neut');
+  sc2('rc3','rv3','rs3',(over>=0?'+':'')+yen(over),over>0?'超過しています':'余裕があります',cls);
+  // 超過率カード → 目標L値との乖離（pt）に変更
+  sc2('rc4','rv4','rs4',
+    (lDiff>=0?'+':'')+ptStr(lDiff),
+    `目標L値 ${(tL*100).toFixed(1)}% に対して` + (lDiff>0.02?' → 要削減':lDiff>0.01?' → 要注意':' → 良好'),
+    cls
+  );
+  // ラベルも変更
+  $('rc4').querySelector('.r-lbl').textContent = '目標L値との乖離';
+
+  // L値表示（売上入力時 or 推計）
+  $('l-ref-wrap').classList.remove('hidden');
+  $('rv-l').textContent = (totalActL*100).toFixed(1)+'%';
+  $('rv-l').className   = 'r-val '+(lDiff>0.02?'warn':lDiff>0.01?'caut':lDiff<0?'ok':'neut');
+  const salesNote = actSales>0 ? `実績売上 ${yen(actSales)} で計算` : `売上目標 ${yen(Math.round(useSales))} で推計`;
+  $('rs-l').textContent = `社員込み総L値（${salesNote}）`;
+  $('rc-l').querySelector('.r-lbl').textContent = '着地L値（社員込み推計）';
+
+  // ペースバー（アルバイト許容予算ベース）
+  const maxBar = hAllow*1.5;
+  $('pb-fill').style.width      = maxBar>0?Math.min(actCost/maxBar*100,100)+'%':'0%';
+  $('pb-fill').style.background = cls==='warn'?'var(--warn)':cls==='caut'?'var(--caut)':'var(--ok)';
+  $('pb-tgt').style.left        = maxBar>0?(hAllow/maxBar*100)+'%':'66.7%';
+  $('pb-tgt').setAttribute('data-lbl','許容予算');
+  $('pb-txt').textContent       = `実績 ${yen(actCost)} ／ 許容 ${yen(Math.round(hAllow))}`;
+  $('pb-max-lbl').textContent   = `${yen(Math.round(maxBar))}（許容×1.5）`;
+}
+
+// 初期化
+onMonthChange();
+</script>
+</body>
+</html>
